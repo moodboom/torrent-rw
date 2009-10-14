@@ -29,12 +29,12 @@ else
 
 // print torrent infos
 $torrent = new Torrent( './test.torrent' );
-echo '<pre>private: ', $torrent->is_private() ? 'yes' : 'no', 
+echo '<pre>private: ', $torrent->is_private() ? 'yes' : 'no',
 	 '<br>annonce: ';
 var_dump( $torrent->announce() );
-echo '<br>name: ', $torrent->name(), 
-	 '<br>comment: ', $torrent->comment(), 
-	 '<br>piece_length: ', $torrent->piece_length(), 
+echo '<br>name: ', $torrent->name(),
+	 '<br>comment: ', $torrent->comment(),
+	 '<br>piece_length: ', $torrent->piece_length(),
 	 '<br>size: ', $torrent->size( 2 ),
 	 '<br>hash info: ', $torrent->hash_info(),
 	 '<br>stats: ';
@@ -63,21 +63,21 @@ if ( $errors = $torrent->errors() ) // errors method return the error stack
 //$torrent->send();
  * </code>
  *
- * @author		Adrien Gibrat <adrien.gibrat@gmail.com>
- * @copyleft		2009 - Just use it!
- * @license		http://www.gnu.org/licenses/gpl.html GNU General Public License version 3
- * @version		Release: 0.9
+ * @author   Adrien Gibrat <adrien.gibrat@gmail.com>
+ * @copyleft 2009 - Just use it!
+ * @license  http://www.gnu.org/licenses/gpl.html GNU General Public License version 3
+ * @version  Release: 0.9
  */
 class Torrent {
 
 	/**
 	* @var array List of error occured
 	*/
-	static public $errors = array();
+	static protected $errors = array();
 
 	/** Read and decode torrent file/data OR build a torrent from source folder/file(s)
 	 * Supported signatures:
-	 * - Torrent(); // get an instance (usefull to scrape an check errors)
+	 * - Torrent(); // get an instance (usefull to scrape and check errors)
 	 * - Torrent( string $torrent ); // analyse a torrent file
 	 * - Torrent( string $torrent, string $announce );
 	 * - Torrent( string $torrent, array $meta );
@@ -117,7 +117,7 @@ class Torrent {
 	 * @return string|boolean last error message or false if none
 	 */
 	public function error() {
-		return empty( self::$errors ) ? 
+		return empty( self::$errors ) ?
 			false :
 			self::$errors[0]->getMessage();
 	}
@@ -126,7 +126,7 @@ class Torrent {
 	 * @return array|boolean error list or false if none
 	 */
 	public function errors() {
-		return empty( self::$errors ) ? 
+		return empty( self::$errors ) ?
 			false :
 			self::$errors;
 	}
@@ -224,8 +224,8 @@ class Torrent {
 	 * @return string hash info or null if info not set
 	 */
 	public function hash_info () {
-		return isset( $this->info ) ? 
-			sha1( self::encode( $this->info ) ) : 
+		return isset( $this->info ) ?
+			sha1( self::encode( $this->info ) ) :
 			null;
 	}
 
@@ -235,14 +235,14 @@ class Torrent {
 	 */
 	public function content ( $precision = null ) {
 		$files = array();
-		if ( is_array( $this->info['files'] ) )
+		if ( isset( $this->info['files'] ) && is_array( $this->info['files'] ) )
 			foreach ( $this->info['files'] as $file )
-				$files[self::path( $file['path'], $this->info['name'] )] = $precision ? 
-					self::format( $file['length'], $precision ) : 
+				$files[self::path( $file['path'], $this->info['name'] )] = $precision ?
+					self::format( $file['length'], $precision ) :
 					$file['length'];
 		elseif ( isset( $this->info['name'] ) )
-				$files[$this->info['name']] = $precision ? 
-					self::format( $this->info['length'], $precision ) : 
+				$files[$this->info['name']] = $precision ?
+					self::format( $this->info['length'], $precision ) :
 					$this->info['length'];
 		return $files;
 	}
@@ -253,7 +253,7 @@ class Torrent {
 	public function offset () {
 		$files = array();
 		$size = 0;
-		if ( is_array( $this->info['files'] ) )
+		if ( isset( $this->info['files'] ) && is_array( $this->info['files'] ) )
 			foreach ( $this->info['files'] as $file )
 				$files[self::path( $file['path'], $this->info['name'] )] = array(
 					'startpiece'	=> floor( $size / $this->info['piece length'] ),
@@ -277,12 +277,12 @@ class Torrent {
 	 */
 	public function size ( $precision = null ) {
 		$size = 0;
-		if ( is_array( $this->info['files'] ) )
+		if ( isset( $this->info['files'] ) && is_array( $this->info['files'] ) )
 			foreach ( $this->info['files'] as $file )
 				$size += $file['length'];
 		elseif ( isset( $this->info['name'] ) )
 				$size = $this->info['length'];
-		return is_null( $precision ) ? 
+		return is_null( $precision ) ?
 			$size :
 			self::format( $size, $precision );
 	}
@@ -316,7 +316,7 @@ class Torrent {
 	 * @return boolean file has been saved or not
 	 */
 	public function save ( $filename = null ) {
-		return file_put_contents( is_null( $filename ) ? $this->info['name'] . '.torrent' : $filename, $this );
+		return file_put_contents( is_null( $filename ) ? $this->info['name'] . '.torrent' : $filename, $this->encode( $this ) );
 	}
 
 	/** Send torrent file to client
@@ -324,10 +324,9 @@ class Torrent {
 	 * @return void script exit
 	 */
 	public function send ( $filename = null ) {
-		$data = (string) $this;
+		$data = $this->encode( $this );
 		header( 'Content-type: application/x-bittorrent' );
 		header( 'Content-Length: ' . strlen( $data ) );
-		header( 'Last-Modified: ' . gmdate( 'D, d M Y H:i:s', $this->{'creation date'} ) . ' GMT');
 		header( 'Content-Disposition: attachment; filename="' . ( is_null( $filename ) ? $this->info['name'] . '.torrent' : $filename ) . '"' );
 		exit( $data );
 	}
@@ -338,7 +337,7 @@ class Torrent {
 	 * @param mixed data to encode
 	 * @return string torrent encoded data
 	 */
-	static protected function encode ( $mixed ) {
+	static public function encode ( $mixed ) {
 		switch ( gettype( $mixed ) ) {
 			case 'integer':
 			case 'double':
@@ -392,7 +391,7 @@ class Torrent {
 	 * @return array decoded torrent data
 	 */
 	static protected function decode ( $string ) {
-		$data = is_file( $string ) || self::url_exists( $string ) ? 
+		$data = is_file( $string ) || self::url_exists( $string ) ?
 			file_get_contents( $string ) :
 			$string;
 		return (array) self::decode_data( $data );
@@ -659,7 +658,7 @@ class Torrent {
 	 */
 	static private function char ( $data ) {
 		return empty( $data ) ?
-			false : 
+			false :
 			substr( $data, 0, 1 );
 	}
 
