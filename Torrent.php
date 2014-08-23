@@ -476,8 +476,10 @@ class Torrent {
 			$key = self::decode_string( $data );
 			if ( isset( $dictionary[$key] ) )
 				return self::set_error( new Exception( 'Duplicate dictionary key' ) );
-			if ( $key < $previous )
-				return self::set_error( new Exception( 'Missorted dictionary key' ) );
+			// MDM We are hitting false-positives here on embedded dictionaries
+			// Just taking this out gets it all working again.
+			// if ( $key < $previous )
+			// 	return self::set_error( new Exception( 'Missorted dictionary key' ) );
 			$dictionary[$key] = self::decode_data( $data );
 			$previous = $key;
 		}
